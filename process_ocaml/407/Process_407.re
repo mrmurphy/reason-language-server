@@ -1,4 +1,5 @@
 
+open Compiler_libs_407;
 open SharedTypes;
 open Belt.Result;
 
@@ -29,23 +30,27 @@ let fullForCmt = (~moduleName, ~allLocations, cmt, uri, processDoc) => {
   | Interface(signature) =>
     Pprintast.signature(Stdlib.Format.str_formatter, Untypeast.untype_signature(signature));
     Ok(Format.flush_str_formatter());
-  | _ => Error("Cannot show ppxed source for files with type errors at the moment")
+  | _ => Error("Not a well-typed implementation")
   }
 }; */
+
+let module Convert = Migrate_parsetree.Convert(Migrate_parsetree.OCaml_407, Migrate_parsetree.OCaml_408);
 
 let astForCmt = cmt => {
   let%try infos = Shared.tryReadCmt(cmt);
   switch (infos.cmt_annots) {
   | Implementation(structure) => {
-    Ok(`Implementation(Untypeast.untype_structure(structure)))
-    /* Printast.implementation(Stdlib.Format.str_formatter, );
+    /* The definition of my Compiler_libs_406 is different from ocaml-migrate-parsetree's in
+       a couple small ways that don't actually change the in-memory representation :eyeroll: */
+    Ok(`Implementation(Convert.copy_structure(Obj.magic(Untypeast.untype_structure(structure)))))
+    /* Printast.implementation(Stdlib.Format.str_formatter, Untypeast.untype_structure(structure));
     Ok(Format.flush_str_formatter()); */
   }
   | Interface(signature) =>
-    Ok(`Interface(Untypeast.untype_signature(signature)))
+    Ok(`Interface(Convert.copy_signature(Obj.magic(Untypeast.untype_signature(signature)))))
     /* Printast.interface(Stdlib.Format.str_formatter, Untypeast.untype_signature(signature));
     Ok(Format.flush_str_formatter()); */
-  | _ => Error("Cannot show ppxed source for files with type errors at the moment")
+  | _ => Error("Not a well-typed implementation")
   }
 };
 
