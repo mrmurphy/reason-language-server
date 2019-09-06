@@ -185,10 +185,14 @@ let findCompletable = (text, offset) => {
       let rec loop = i => {
         i < 0 ? Lident(String.sub(text, i + 1, offset - (i + 1))) : switch (text.[i]) {
         | '~' => Labeled(String.sub(text, i + 1, offset - (i + 1)))
-        | 'a'..'z' | 'A'..'Z' | '0'..'9' | '.' | '_' => loop(i - 1)
+        | 'a'..'z' | 'A'..'Z' | '0'..'9' | '.' | '_' | '#' => loop(i - 1)
         | _ => {
-          i == offset - 1 ? Nothing : Lident(String.sub(text, i + 1, offset - (i + 1)))
-        }
+            if(i == offset - 1) {
+              Nothing
+            } else {
+              Lident(String.sub(text, i + 1, offset - (i + 1)));
+            } 
+          }
         }
       };
       loop(offset - 1)
