@@ -202,6 +202,17 @@ module Type = {
   | Record(list(Attribute.t))
   | Variant(list(Constructor.t))
   ;
+
+  let showKind = kind => {
+    switch (kind) {
+    | Abstract(_) => "Abstract"
+    | Open => "Open"
+    | Tuple(_) => "Tuple"
+    | Record(_) => "Record"
+    | Variant(_) => "Variant"
+    };
+  }
+
   type t = {
     kind,
     params: list((flexibleType, Location.t)),
@@ -362,6 +373,16 @@ module Loc = {
   | TypeDefinition(string, flexibleDeclaration, int)
   | Explanation(string)
   | Open;
+
+  let tToString = t => switch t {
+  | Typed(flex, _) => "Typed: " ++ flex.toString()
+  | Constant(_) => "Consant"
+  | Module(t) => Format.sprintf("Module: %s", t->typedToString)
+  | TopLevelModule(s) => Format.sprintf("TopLevelModule: %s", s)
+  | TypeDefinition(s, _, _) => Format.sprintf("TypeDefinition: %s", s)
+  | Explanation(s) => Format.sprintf("Explanation: %s", s)
+  | Open => "Open"
+  };
 };
 
 type openTracker = {

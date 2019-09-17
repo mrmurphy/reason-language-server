@@ -531,6 +531,7 @@ let get =
     ++ String.concat(" ", Belt.List.map(opens, e => e.file.uri)),
   );
 
+  Log.log(Format.sprintf("AAA: token parts are %s", tokenParts->String.concat("&", _)));
   switch (tokenParts) {
   | [] => []
   | [suffix] =>
@@ -573,6 +574,8 @@ let get =
     open Infix;
     Log.log("Completing for " ++ String.concat("<.>", multiple));
 
+    Log.log("AAA Completion items:" ++ multiple->String.concat("&", _));
+    
     switch (determineCompletion(multiple)) {
     | `Normal(path) =>
       {
@@ -585,17 +588,25 @@ let get =
       |? []
     | `Attribute(target, suffix) =>
       {
-        Log.log("suffix :" ++ suffix);
+        Log.log(Format.sprintf("AAA: target=%s, suffix=%s", target->String.concat(",", _), suffix));
         switch (target) {
         | [] => None
         | [first, ...rest] =>
-          Log.log("-------------- Looking for " ++ first);
+          Log.log("AAA: -------------- Looking for " ++ first);
           let%opt declared =
             Query.findInScope(pos, first, env.file.stamps.values);
-          Log.log("Found it! " ++ declared.name.txt);
+          Log.log("AAA: Found it! " ++ declared.name.txt);
           let%opt (path, _args) = declared.contents.typ.getConstructorPath();
           let%opt (env, typ) =
             Hover.digConstructor(~env, ~getModule, path);
+
+          // let x : Location.loc(string) = 0;
+          // let Location.loc(typename) = typ.name;
+          // Log.log(Format.sprintf("AAA: typename=%s modulepath=%s",
+          // typ.name.txt,  typ.contents.params->List.hd->fst.toString()));
+
+          Log.log(Format.sprintf("AAA: typ===%s", typ.contents.kind->SharedTypes.Type.showKind));
+          
           let%opt (env, typ) =
             Belt.List.reduce(
               rest,
@@ -603,7 +614,14 @@ let get =
               (current, name) => {
                 let%opt (env, typ) = current;
                 switch (typ.contents.kind) {
+                | Abstract(Some(( _, attributes ))) => 
+                  Log.log("AAA: abstract attrs=" ++ attributes->Belt.List.map(a => a.toString())->String.concat(", ", _));
+                  None
+                | Abstract(None) => 
+                  Log.log("AAA: NONE HERE");
+                  None
                 | Record(attributes) =>
+                  Log.log("AAA: attributes=" ++ attributes->Belt.List.map(a => a.typ.toString())->String.concat(", ", _));
                   let%opt attr =
                     attributes |. Belt.List.getBy(a => a.name.txt == name);
                   Log.log("Found attr " ++ name);
@@ -614,7 +632,42 @@ let get =
               },
             );
           switch (typ.contents.kind) {
+          | Abstract(Some(( _, attributes ))) => 
+            Log.log("AAA: abstract attrs2=" ++ attributes->Belt.List.map(a => a.toString())->String.concat(", ", _));
+            None
+          | Abstract(None) => 
+            // Log.log(Format.sprintf("AAA: scopeLoc=%s", typ.scopeLoc->Utils.showLocation));
+
+            // Log.log(Format.sprintf("AAA: ADJUSTING TO POS %d,%d", pos->fst, pos->snd - 1));
+            // let%opt (_, definitionLocation) =
+            // References.definitionForPos(
+            //   ~pathsForModule=package.pathsForModule,
+            //   ~file=full.file,
+            //   ~extra=full.extra,
+            //   ~getUri=State.fileForUri(state, ~package),
+            //   ~getModule=State.fileForModule(state, ~package),
+            //   (pos->fst, pos->snd - 2),
+            // );
+            // Log.log("AAA: I MADE IT PAST");
+            // let loc = References.locForLocations(~extra=full.extra, definitionLocation);
+            // switch (loc) {
+            //   | None =>
+            //   Log.log("AAA: We tried to get fields but couldn't find them.");
+            //   | Some(loc) => switch(loc) {
+            //     | Typed(flexible, typed) => 
+            //       Log.log(Format.sprintf("AAA: WE GOT IT! %s", flexible.toString()));
+            //     | _ => Log.log("AAA: We tried to get fields but it wasn't a 'Typed'");
+            //   }
+            // };
+            // Log.log(Format.sprintf("AAA: get info here? %s", typ.contents.params->List.hd->fst.toString()));
+
+            // We've discovered that with the pos, we can find the actual "SharedTypes.loc"  we need, as long as the pos matches the location of the *definition* of the variable. But the pos we have in the autocomplete does *not* have the position of the variable we're referencing. How do we find the position of the declaration of the variable?
+
+            // Okay, we now know how to get the position of the definition. The problem is that the LSP doesn't parse gandalf## as a loc, but it does parse gandalf as a loc. Maybe because the compiler can't compile gandalf##? How does the record do it with .?
+
+            None
           | Record(attributes) =>
+            Log.log("AAA: attributes2=" ++ attributes->Belt.List.map(a => a.typ.toString())->String.concat(", ", _));
             Some(
               attributes
               |. Belt.List.keepMap(a =>

@@ -107,8 +107,8 @@ let handlers: list((string, (state, Json.t) => result((state, Json.t), string)))
       Ok(args)
     }
     | Lident(string) => {
-      // Log.log("Completing for string " ++ string);
-      let parts = Str.split(Str.regexp_string("."), string);
+      Log.log("AAA: Completing for string " ++ string);
+      let parts = Str.split(Str.regexp("[\\.|##]"), string);
       let parts = string.[String.length(string) - 1] == '.' ? parts @ [""] : parts;
       let rawOpens = PartialParser.findOpens(text, offset);
 

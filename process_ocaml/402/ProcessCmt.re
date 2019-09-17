@@ -4,6 +4,39 @@ open Typedtree;
 open SharedTypes;
 open Infix;
 
+let showExpr = (exp: Types.type_expr) => switch(exp.desc) {
+  | Tvar(_) => "Tvar"
+  | Tarrow(_) => "Tarrow"
+  | Ttuple(_) => "Ttuple"
+  | Tconstr(_) => "Tconstr"
+  | Tobject(_) => "Tobject"
+  | Tfield(_) => "Tfield"
+  | Tnil => "Tnil"
+  | Tlink(_) => "Tlink"
+  | Tsubst(_) => "Tsubst"
+  | Tvariant(_) => "Tvariant"
+  | Tunivar(_) => "Tunivar"
+  | Tpoly(_) => "Tpoly"
+  | Tpackage(_) => "Tpackage"
+};
+
+
+let showCTypDesc = (desc: core_type_desc) => {
+  switch (desc) {
+  | Ttyp_any => "Ttyp_any"
+  | Ttyp_var(_) => "Ttyp_var"
+  | Ttyp_arrow(_) => "Ttyp_arrow"
+  | Ttyp_tuple(_) => "Ttyp_tuple"
+  | Ttyp_constr(_) => "Ttyp_constr"
+  | Ttyp_object(_) => "Ttyp_object"
+  | Ttyp_class(_) => "Ttyp_class"
+  | Ttyp_alias(_) => "Ttyp_alias"
+  | Ttyp_variant(_) => "Ttyp_variant"
+  | Ttyp_poly(_) => "Ttyp_poly"
+  | Ttyp_package(_) => "Ttyp_package"
+  };
+};
+
 
 
 let getTopDoc = structure => {
@@ -123,8 +156,21 @@ let rec forSignatureTypeItem = (env, exported: SharedTypes.Module.exported, item
             args |> List.map(Shared.makeFlexible)
           )))
           | Some({desc: Ttuple(items)}) => Tuple(items |> List.map(Shared.makeFlexible))
+          | Some({desc: Tobject(typeExpr, {contents: Some((path, otherExprs))})}) =>
+            Log.log(Format.sprintf("AAA: I'm dealing with an object %s",
+            otherExprs->List.map(showExpr, _)->String.concat(",", _)));
+            Abstract(None)
+          | Some({desc: Tobject(typeExpr, {contents: None})}) =>
+            Log.log(Format.sprintf("AAA: I'm dealing with empty object"));
+            Abstract(None)
+
+          | None => 
+            Log.log("AAA: We've got nothing and you know it inside of forSignatureTypeItem");
+            Abstract(None)
           /* TODO dig */
-          | _ => Abstract(None)
+          | _ => 
+          Log.log("AAA: Dealing with some other abstract type here.");
+          Abstract(None)
         }
         | Type_open => Open
         | Type_variant(constructors) => {
@@ -158,7 +204,9 @@ let rec forSignatureTypeItem = (env, exported: SharedTypes.Module.exported, item
             contents
           }))
         }
-        | Type_record(labels, _) => Record(labels |> List.map(
+        | Type_record(labels, _) => 
+          Log.log("AAA: OH LOOK I FOUND A RECORD IN forSignatureTypeItem");
+          Record(labels |> List.map(
           ({ld_id, ld_type}) => {
             let astamp = Ident.binding_time(ld_id);
             let name = Ident.name(ld_id);
@@ -226,8 +274,22 @@ let forTypeDeclaration = (~env, ~exported: Module.exported, {typ_id, typ_loc, ty
             args |> List.map(t => Shared.makeFlexible(t.ctyp_type))
           )))
           | Some({ctyp_desc: Ttyp_tuple(items)}) => Tuple(items |> List.map(t => Shared.makeFlexible(t.ctyp_type)))
+          | Some({ctyp_desc: Ttyp_object(things, flag)}) =>
+            Log.log(Format.sprintf("AAA: I'm dealing with an object %s",
+            things->List.map(((t, _ ,_)) => t, _)->String.concat(",", _)));
+            Abstract(None)
+
           /* TODO dig */
-          | _ => Abstract(None)
+          | Some({ctyp_desc}) => 
+            Log.log(Format.sprintf("AAA: Some other descriptor %s", showCTypDesc(ctyp_desc)))
+            Abstract(None)
+          | None => 
+            Log.log("AAA: We've got nothing and you know it");
+            Abstract(None)
+          | _ => 
+          // TODO: Here we should dig in and get fields from the abstract type, mabye even return an obj type?
+            Log.log("AAA: We've got an abstract type here with no body! 402 you know it");
+            Abstract(None)
         }
       | Ttype_open => Open
       | Ttype_variant(constructors) => Variant(constructors |> List.map(({cd_id, cd_name: name, cd_args, cd_res}) => {
@@ -239,7 +301,9 @@ let forTypeDeclaration = (~env, ~exported: Module.exported, {typ_id, typ_loc, ty
           List.map(t => (Shared.makeFlexible(t.ctyp_type), t.ctyp_loc)),
         res: cd_res |?>> t => Shared.makeFlexible(t.ctyp_type),
       }}))
-      | Ttype_record(labels) => Record(labels |> List.map(
+      | Ttype_record(labels) =>
+        Log.log("AAA: OH LOOK I FOUND A RECORD IN forTypeDeclaration");
+        Record(labels |> List.map(
         ({ld_id, ld_name: name, ld_type: {ctyp_type, ctyp_loc}}) => {
         let astamp = Ident.binding_time(ld_id);
           {Type.Attribute.stamp: astamp, name, typ: Shared.makeFlexible(ctyp_type), typLoc: ctyp_loc}

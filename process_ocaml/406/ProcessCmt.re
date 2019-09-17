@@ -231,7 +231,9 @@ let forTypeDeclaration = (~env, ~exported: Module.exported, {typ_id, typ_loc, ty
           )))
           | Some({ctyp_desc: Ttyp_tuple(items)}) => Tuple(items |> List.map(t => Shared.makeFlexible(t.ctyp_type)))
           /* TODO dig */
-          | _ => Abstract(None)
+          | _ => 
+          Log.log("AAA: We've got an abstract type here with no body! 406");
+          Abstract(None)
         }
       | Ttype_open => Open
       | Ttype_variant(constructors) => Variant(constructors |> List.map(({cd_id, cd_name: name, cd_args, cd_res}) => {

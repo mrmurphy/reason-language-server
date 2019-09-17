@@ -232,6 +232,7 @@ let getAst = (~cacheLocation, ~compilerVersion, ~moduleName, ~uri) => {
 }; */
 
 let process = (~uri, ~moduleName, ~basePath, ~reasonFormat, text, ~cacheLocation, ~compilerVersion, ~allLocations, compilerPath, refmtPath, includes, flags) => {
+  Log.log("AAA: processing in AsYouType");
   let interface = Utils.endsWith(uri, "i");
   let%try (syntaxError, astFile) = switch (refmtPath) {
     | Some(refmtPath) => runRefmt(~interface, ~moduleName, ~cacheLocation, text, refmtPath);
@@ -258,7 +259,11 @@ let process = (~uri, ~moduleName, ~basePath, ~reasonFormat, text, ~cacheLocation
         | Some({Unix.st_size: size}) => Log.log("Size " ++ string_of_int(size))
         | _ => Log.log("Doesn't exist")
         };
+
+        Log.log("AAA: Gonna get the CMT in ERROR branch");
         let%try_wrap {file, extra} = fullForCmt(cmtPath, uri, x => x);
+        Log.log("AAA: GOT the CMT");
+
         let errorText = String.concat("\n", lines);
         switch (syntaxError) {
           | Some(s) =>
@@ -286,7 +291,9 @@ let process = (~uri, ~moduleName, ~basePath, ~reasonFormat, text, ~cacheLocation
       // close_in(ic);
       // | _ => Log.log("Doesn't exist")
       // };
+      Log.log("AAA: Gonna get the CMT in OK branch");
       let%try_wrap full = fullForCmt(cmtPath, uri, x => x);
+      Log.log("AAA: GOT the CMT");
       Success(String.concat("\n", lines @ error), full)
     }
   }
